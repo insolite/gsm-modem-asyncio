@@ -17,6 +17,7 @@ class SerialProtocol(TcpProtocol):
     def connection_made(self, transport):
         super().connection_made(transport)
         transport.serial.rts = False  # You can manipulate Serial object via transport
+        self.connector.connected()
 
     def data_received(self, data):
         super().data_received(data)

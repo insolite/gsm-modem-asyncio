@@ -11,6 +11,7 @@ class AsyncioSerialConnector(Connector):
     def __init__(self, client, serial_url, baudrate):
         super().__init__(client, serial_url, baudrate)
         self.protocol = None
+        self.connection_future = None
 
     async def connect(self):
         _, self.protocol = await serial_asyncio.create_serial_connection(
@@ -20,6 +21,8 @@ class AsyncioSerialConnector(Connector):
             baudrate=self.baudrate
         )
         self.ready = True
+        self.connection_future = asyncio.Future()
+        await self.connection_future
 
     async def close(self):
         if self.protocol:
@@ -32,3 +35,6 @@ class AsyncioSerialConnector(Connector):
 
     def got_data(self, data):
         self.client.got_data(data)
+
+    def connected(self):
+        self.connection_future.set_result(None)
