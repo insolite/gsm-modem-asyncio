@@ -18,11 +18,12 @@ from .exceptions import (
 
 def at_operation(func):
     async def wrapped(self, *args, **kwargs):
-        await self.ensure()
-        try:
-            return await func(self, *args, **kwargs)
-        except asyncio.CancelledError:
-            raise NoReplyAtError
+        with await self.operation_lock:
+            await self.ensure()
+            try:
+                return await func(self, *args, **kwargs)
+            except asyncio.CancelledError:
+                raise NoReplyAtError
     return wrapped
 
 
@@ -33,6 +34,7 @@ class GsmModem(RegexpClient):
         self.serial_url = serial_url
         self.baudrate = baudrate
         self.line_end = line_end
+        self.operation_lock = asyncio.Lock()
 
     @property
     def ready(self):
@@ -87,7 +89,7 @@ class GsmModem(RegexpClient):
         return csq
 
     @at_operation
-    async def send_ussd(self, cmd, end_session=True):
+    async def send_ussd(self, cmd, timeout=20, end_session=True):
         ussd_cmd = 'AT+CUSD=1,"{}"'.format(cmd)
         await self.send_line(ussd_cmd)
         try:
@@ -95,7 +97,7 @@ class GsmModem(RegexpClient):
         except asyncio.CancelledError:
             raise NoReplyUssdError
         try:
-            match_index, match = await self.get_line_reply(20, r'\+CUSD:\s*(\d+),"(.*)",\s*(\d+)', r'\+CUSD:\s*4.*')
+            match_index, match = await self.get_line_reply(timeout, r'\+CUSD:\s*(\d+),"(.*)",\s*(\d+)', r'\+CUSD:\s*4.*')
         except asyncio.CancelledError:
             if self.buffer:
                 raise UnexpectedReplyUssdError
@@ -107,7 +109,7 @@ class GsmModem(RegexpClient):
         raise DeviceUssdError
 
     @at_operation
-    async def send_sms(self, number, text, cmgf=1):
+    async def send_sms(self, number, text, timeout=20, cmgf=1):
         try:
             # CMGF
             match_index, match = await self.send_cmd('AT+CMGF={}'.format(cmgf), 5, r'OK')
@@ -124,11 +126,15 @@ class GsmModem(RegexpClient):
                 raise UnexpectedReplySmsError
             # text
             try:
-                match_index, match = await self.send_cmd(text, 5, re.escape(text))
+                match_index, match = await self.send_cmd(text, 5)
                 if match_index != 0:
                     raise UnexpectedReplySmsError
             finally:
                 await self.send_text('\x1a')
+            match_index, match = await self.get_line_reply(timeout, r'\+CMGS:\s*(\d+)', r'ERROR')
+            if match_index != 0:
+                raise UnexpectedReplySmsError
+            await self.get_line_reply(5, r'OK')
         except asyncio.CancelledError:
             if self.buffer:
                 raise UnexpectedReplySmsError
