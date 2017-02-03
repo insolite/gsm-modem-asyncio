@@ -6,12 +6,13 @@ import gsm_modem_asyncio as package
 
 install_reqs = parse_requirements('requirements.txt', session=False)
 requirements = [str(ir.req) for ir in install_reqs]
+hyphen_package_name = package.__name__.replace('_', '-')
 
 setup(
-    name=package.__name__,
+    name=hyphen_package_name,
     version=package.__version__,
     packages=[package.__name__],
-    url='https://github.com/insolite/{}'.format(package.__name__),
+    url='https://github.com/insolite/{}'.format(hyphen_package_name),
     author='Oleg Krasnikov',
     author_email='a.insolite@gmail.com',
     description='GSM modem control library',

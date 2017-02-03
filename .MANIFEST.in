@@ -1,1 +1,2 @@
 recursive-include gsm_modem_asyncio *.py
+include requirements.txt
