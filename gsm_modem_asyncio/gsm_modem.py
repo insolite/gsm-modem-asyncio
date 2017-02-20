@@ -4,6 +4,7 @@ import re
 from .regexp_client import RegexpClient
 from .asyncio_serial_connector import AsyncioSerialConnector
 from .exceptions import (
+    CancelError,
     NoReplyAtError,
     CallError,
     CsqError,
@@ -139,3 +140,7 @@ class GsmModem(RegexpClient):
             if self.buffer:
                 raise UnexpectedReplySmsError
             raise NoReplySmsError
+
+    def cancel(self):
+        if self.reply_future and not self.reply_future.done():
+            self.reply_future.set_exception(CancelError)

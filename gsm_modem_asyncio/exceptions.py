@@ -1,10 +1,14 @@
 
 
-class GsmSerialError:
+class GsmModemError(Exception):
     pass
 
 
-class AtError(GsmSerialError):
+class CancelError(GsmModemError):
+    pass
+
+
+class AtError(GsmModemError):
     pass
 
 

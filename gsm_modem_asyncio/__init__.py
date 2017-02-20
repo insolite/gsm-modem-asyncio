@@ -5,7 +5,8 @@ from .connector import Connector
 from .asyncio_serial_connector import AsyncioSerialConnector
 from .serial_protocol import SerialProtocol
 from .exceptions import (
-    GsmSerialError,
+    CancelError,
+    GsmModemError,
     AtError,
     NoReplyAtError,
     CallError,
